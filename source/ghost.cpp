@@ -68,7 +68,7 @@ Ghost::Color Ghost::get_color()
 {
     return color;
 }
-//移动方法
+//移动方法 ghost状态不同 采取不同移动策略
 void Ghost::moveup()
 {
     QVector<QPixmap> *ptr;
@@ -130,10 +130,12 @@ void Ghost::movedown()
         break;
     }
 
+    //动画循环播放
     anim_index++;
     if (anim_index >= ptr->size()) {
         anim_index = 0;
     }
+    //设置item显示图片
     setPixmap((*ptr)[anim_index]);
     setY(static_cast<int>(y()) + 1);
 }
@@ -158,20 +160,21 @@ void Ghost::moveright()
         anim_index = 0;
     }
     setPixmap((*ptr)[anim_index]);
+    //将幽灵在场景中的 y 坐标增加 1，表示向下移动
     setX(static_cast<int>(x()) + 1);
 }
 
 //判断是否重叠
 bool Ghost::overlapable(int i, int j)
 {
+    //边界检查
     if (i < 0 || j < 0) {
         return false;
     }
-
     if (i >= game->map_height || j >= game->map_width) {
         return false;
     }
-
+    //进一步判断墙和门 门在满足条件时能进
     switch (game->map[i][j]->get_type()) {
     case Wall:
         return false;
@@ -189,7 +192,7 @@ bool Ghost::overlapable(int i, int j)
     }
 }
 
-//随机设置方向
+//随机设置方向 要不能是墙
 void Ghost::setdir_randomly()
 {
     QVector<Dir> oklist;
@@ -205,14 +208,18 @@ void Ghost::setdir_randomly()
     if (overlapable(_y - 1, _x)) {
         oklist.push_back(Up);
     }
+    //随机挑选方向
     dir = oklist.at(QRandomGenerator::global()->generate() % oklist.size());
 }
 
 //离开笼子方法
 void Ghost::go_out_cage()
 {
+    //计算幽灵与门之间距离
     int x_dist_to_gate = game->gate->_x - _x;
+    //垂直距离
     int y_dist_to_gate = game->gate->_y - _y;
+    //根据相对位置确定移动方向
     if (x_dist_to_gate > 0) {
         set_dir(GameObject::Right);
     } else if (x_dist_to_gate < 0) {
@@ -232,6 +239,7 @@ void Ghost::chase_pacman()
 {
     bool okdir[5] = {false, false, false, false, false};
     QVector<Dir> oklist;
+    //首先判断幽灵的四个方向是不是都能走
     if (overlapable(_y, _x + 1)) {
         okdir[Right] = true;
         oklist.push_back(Right);
@@ -249,6 +257,7 @@ void Ghost::chase_pacman()
         oklist.push_back(Up);
     }
 
+    //确定反方向 避免进入死循环 （没解决）
     Dir backward_dir;
     switch (dir) {
     case Up:
@@ -273,6 +282,7 @@ void Ghost::chase_pacman()
         QPair<int, int> vector = chase_strategy(this);
         int dist_x = vector.first;
         int dist_y = vector.second;
+        //根据pacman的位置确定ghost的移动方向
         if (dist_y > 0) {
             if (okdir[Down] && dir != Up) {
                 dir = Down;
@@ -332,7 +342,7 @@ void Ghost::chase_pacman()
         }
     } else if (oklist.size() == 2) {
         if (okdir[dir] == false) {
-            // ghost is on a corner
+            // ghost 在角落
             if (oklist[0] == backward_dir) {
                 dir = oklist[1];
             } else {
