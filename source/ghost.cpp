@@ -234,7 +234,7 @@ void Ghost::go_out_cage()
 }
 
 
-//追逐和躲避判断
+//追逐和躲避判断  还得改
 void Ghost::chase_pacman()
 {
     bool okdir[5] = {false, false, false, false, false};
@@ -352,10 +352,11 @@ void Ghost::chase_pacman()
     }
 }
 
-
+//跟上面类似 但是幽灵以躲避pacman为目的
 void Ghost::dodge_pacman()
 {
-    // false if the adjacent block is a wall
+
+    //先检查各个方向是否能走通
     bool okdir[5] = {false, false, false, false, false};
     QVector<Dir> oklist;
     if (overlapable(_y, _x + 1)) {
@@ -375,6 +376,7 @@ void Ghost::dodge_pacman()
         oklist.push_back(Up);
     }
 
+    //反方向
     Dir backward_dir;
     switch (dir) {
     case Up:
@@ -394,78 +396,113 @@ void Ghost::dodge_pacman()
         break;
     }
 
-    // Change direction only when ghost is
-    // not at an intersection in order to
-    // avoid oscillation.
+    //确定新方向 选择远离pacman的方向移动
     if (oklist.size() > 2) {
         int dist_x = game->pacman->get_x() - _x;
         int dist_y = game->pacman->get_y() - _y;
-        if (dist_y < 0) {
-            if (okdir[Down] && dir != Up) {
-                dir = Down;
-            } else {
-                if (dist_x >= 0) {
-                    if (okdir[Left]) {
-                        dir = Left;
-                    } else if (okdir[Right]) {
-                        dir = Right;
-                    }
-                } else {
-                    if (okdir[Right]) {
-                        dir = Right;
-                    } else if (okdir[Left]) {
-                        dir = Left;
-                    }
-                }
-            }
-        } else if (dist_y > 0) {
-            if (okdir[Up] && dir != Down) {
-                dir = Up;
-            } else {
-                if (dist_x >= 0) {
-                    if (okdir[Left]) {
-                        dir = Left;
-                    } else if (okdir[Right]) {
-                        dir = Right;
-                    }
-                } else {
-                    if (okdir[Right]) {
-                        dir = Right;
-                    } else if (okdir[Left]) {
-                        dir = Left;
-                    }
-                }
-            }
-        } else if (dist_x < 0) {
-            if(okdir[Right] && dir != Left) {
-                dir = Right;
-            } else {
-                if (okdir[Up]) {
-                    dir = Up;
-                } else if(okdir[Down]) {
-                    dir = Down;
-                }
-            }
-        } else if (dist_x > 0) {
-            if(okdir[Left] && dir != Right) {
-                dir = Left;
-            } else {
-                if (okdir[Up]) {
-                    dir = Up;
-                } else if(okdir[Down]) {
-                    dir = Down;
-                }
-            }
+
+    //     if (dist_y < 0) {
+    //         if (okdir[Down] && dir != Up) {
+    //             dir = Down;
+    //         } else {
+    //             if (dist_x >= 0) {
+    //                 if (okdir[Left]) {
+    //                     dir = Left;
+    //                 } else if (okdir[Right]) {
+    //                     dir = Right;
+    //                 }
+    //             } else {
+    //                 if (okdir[Right]) {
+    //                     dir = Right;
+    //                 } else if (okdir[Left]) {
+    //                     dir = Left;
+    //                 }
+    //             }
+    //         }
+    //     } else if (dist_y > 0) {
+    //         if (okdir[Up] && dir != Down) {
+    //             dir = Up;
+    //         } else {
+    //             if (dist_x >= 0) {
+    //                 if (okdir[Left]) {
+    //                     dir = Left;
+    //                 } else if (okdir[Right]) {
+    //                     dir = Right;
+    //                 }
+    //             } else {
+    //                 if (okdir[Right]) {
+    //                     dir = Right;
+    //                 } else if (okdir[Left]) {
+    //                     dir = Left;
+    //                 }
+    //             }
+    //         }
+    //     } else if (dist_x < 0) {
+    //         if(okdir[Right] && dir != Left) {
+    //             dir = Right;
+    //         } else {
+    //             if (okdir[Up]) {
+    //                 dir = Up;
+    //             } else if(okdir[Down]) {
+    //                 dir = Down;
+    //             }
+    //         }
+    //     } else if (dist_x > 0) {
+    //         if(okdir[Left] && dir != Right) {
+    //             dir = Left;
+    //         } else {
+    //             if (okdir[Up]) {
+    //                 dir = Up;
+    //             } else if(okdir[Down]) {
+    //                 dir = Down;
+    //             }
+    //         }
+    //     }
+    // } else if (oklist.size() == 2) {
+    //     if (okdir[dir] == false) {
+    //         // 如果在拐角处，避免选择反方向
+    //         if (oklist[0] == backward_dir) {
+    //             dir = oklist[1];
+    //         } else {
+    //             dir = oklist[0];
+    //         }
+    //     }
+    // }
+        QVector<Dir> preferred_dirs;
+
+        // 根据pacman的位置添加优先选择的方向
+        if (dist_y < 0 && okdir[Down] && dir != Up) {
+            preferred_dirs.push_back(Down);
+        } else if (dist_y > 0 && okdir[Up] && dir != Down) {
+            preferred_dirs.push_back(Up);
+        }
+        if (dist_x < 0 && okdir[Right] && dir != Left) {
+            preferred_dirs.push_back(Right);
+        } else if (dist_x > 0 && okdir[Left] && dir != Right) {
+            preferred_dirs.push_back(Left);
+        }
+
+        // 如果优先方向不为空，从优先方向中随机选择一个
+        if (!preferred_dirs.isEmpty()) {
+            dir = preferred_dirs.at(QRandomGenerator::global()->generate() % preferred_dirs.size());
+        } else {
+            // 否则从所有可行方向中随机选择一个
+            dir = oklist.at(QRandomGenerator::global()->generate() % oklist.size());
         }
     } else if (oklist.size() == 2) {
         if (okdir[dir] == false) {
-            // ghost is on a corner
+            // 如果在拐角处，避免选择反方向
             if (oklist[0] == backward_dir) {
                 dir = oklist[1];
             } else {
                 dir = oklist[0];
             }
         }
+    } else if (oklist.size() == 1) {
+        dir = oklist[0];
+    } else {
+        // 如果没有可行方向，停下
+        dir = Stop;
     }
 }
 
